@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GradeLevel {
+  ANO_1_FUND
+  ANO_2_FUND
+  ANO_3_FUND
+  ANO_4_FUND
+  ANO_5_FUND
+  ANO_6_FUND
+  ANO_7_FUND
+  ANO_8_FUND
+  ANO_9_FUND
+  ANO_1_MEDIO
+  ANO_2_MEDIO
+  ANO_3_MEDIO
+}
+
+enum ComplexityLevel {
+  BASICO
+  MEDIO
+  AVANCADO
+}
+
+model Guardian {
+  id           String          @id @default(cuid())
+  fullName     String
+  email        String          @unique
+  passwordHash String
+  cpf          String          @unique
+  phone        String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  children     Child[]
+  childAccess  ChildGuardian[]
+}
+
+model Child {
+  id             String            @id @default(cuid())
+  guardianId     String
+  name           String
+  age            Int
+  gradeLevel     GradeLevel
+  hobbies        String[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  guardian       Guardian          @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  guardianAccess ChildGuardian[]
+  subjects       ChildSubject[]
+  uploads        UploadedContent[]
+  testSessions   TestSession[]
+}
+
+model ChildGuardian {
+  childId    String
+  guardianId String
+  role       String
+  child      Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  guardian   Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@id([childId, guardianId])
+}
+
+model Subject {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  folderPath  String
+  createdAt   DateTime       @default(now())
+  children    ChildSubject[]
+  uploads     UploadedContent[]
+}
+
+model ChildSubject {
+  childId   String
+  subjectId String
+  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([childId, subjectId])
+}
+
+model UploadedContent {
+  id                String           @id @default(cuid())
+  childId           String
+  subjectId         String
+  originalFileName  String
+  mimeType          String
+  filePath          String
+  extractedText     String
+  complexityLevel   ComplexityLevel
+  summaryForKid     String
+  detailedGuide     String
+  mermaidFlowchart  String
+  generatedImageUrl String?
+  referencesJson    Json?
+  rawAiResponseJson Json?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  child             Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subject           Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  quizQuestions     QuizQuestion[]
+  recommendations   Recommendation[]
+  testSessions      TestSession[]
+}
+
+model QuizQuestion {
+  id                String          @id @default(cuid())
+  uploadedContentId String
+  question          String
+  options           String[]
+  correctOption     Int
+  explanation       String
+  createdAt         DateTime        @default(now())
+  uploadedContent   UploadedContent @relation(fields: [uploadedContentId], references: [id], onDelete: Cascade)
+}
+
+model TestSession {
+  id               String          @id @default(cuid())
+  childId          String
+  uploadedContentId String
+  totalQuestions   Int
+  scorePercent     Float
+  answersJson      Json
+  feedbackJson     Json
+  createdAt        DateTime        @default(now())
+  child            Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  uploadedContent  UploadedContent @relation(fields: [uploadedContentId], references: [id], onDelete: Cascade)
+}
+
+model Recommendation {
+  id                String          @id @default(cuid())
+  uploadedContentId String
+  type              String
+  title             String
+  url               String
+  thumbnailUrl      String?
+  duration          String?
+  relevanceScore    Float
+  source            String
+  createdAt         DateTime        @default(now())
+  uploadedContent   UploadedContent @relation(fields: [uploadedContentId], references: [id], onDelete: Cascade)
+}
